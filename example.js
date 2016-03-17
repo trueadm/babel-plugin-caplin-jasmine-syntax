@@ -4,75 +4,42 @@ var babel  = require("babel-core");
 var plugin = require("./lib/index");
 
 var code = `
-var sinon = require("sinon");
+describe("Infinite Test", function() {
+    describe("With 10 rows of backend data", function () {
 
-var AppRouter = require("router/AppRouter");
-var DummyRouteConfig = require("router/DummyConfig").dummyRouteConfig;
-var DummyHandlers = require("router/DummyConfig").dummyHandlers;
+        var testRows = createDummyData(10),
+            listContainer = document.createElement("div");
 
-describe("Test the AppRouter", function () {
-	var sandbox = null;
-	var routerGoSpy = null;
+        testBed.appendChild(listContainer);
 
-	beforeEach(function () {
-		sandbox = sinon.sandbox.create();
-		routerGoSpy = sandbox.spy(AppRouter, "go");
-		AppRouter.config(DummyRouteConfig);
+        describe("with a window size of 10 and a window count of 2", function () {
+            var list;
 
-	});
+            beforeEach(function () {
+                listContainer.innerHTML = '';
+                list = new InfiniteList({
+                    container: listContainer,
+                    windowSize: 10,
+                    minimumWait: 1,
+                    windowCount: 2,
+                    blockFactory: TestBlockFactory
+                        .setRows(testRows)
+                        .setOffline(false)
+                }).setTotalRows(10);
 
-	afterEach(function () {
-		sandbox.restore();
-	});
+                list.init();
 
-	it("should trigger the correct entering callbacks when going to the first route.", function() {
-		AppRouter.go("/foo/bar");
+                waits(100);
+            });
 
-		waits(100);
-
-		runs(function() {
-			sinon.assert.calledOnce(DummyHandlers.indexHandler.enter);
-			sinon.assert.calledOnce(DummyHandlers.mainSectionHandler.enter);
-			sinon.assert.calledOnce(DummyHandlers.subSectionHandler.enter);
+            it("the first block should contain rows 0-9", function () {
+                runs(function () {
+                    expect(list.getRowsRange().start).toBe(0);
+                    expect(list.getRowsRange().end).toBe(9);
+                });
+            });
 		});
-	});
-
-	// Going from "/foo/bar" to  "buzz/bizz"
-	it("should trigger the correct exiting, updating and entering callbacks when changing route", function() {
-		DummyHandlers.indexHandler.updateSettings.returns(false);
-		DummyHandlers.mainSectionHandler.updateSettings.returns(true);
-		DummyHandlers.subSectionHandler.updateSettings.returns(true);
-
-		AppRouter.go("/buzz/bizz");
-
-		waits(100);
-
-		runs(function() {
-			sinon.assert.called(DummyHandlers.subSectionHandler.exit);
-			sinon.assert.called(DummyHandlers.mainSectionHandler.exit);
-			sinon.assert.called(DummyHandlers.indexHandler.update);
-			sinon.assert.called(DummyHandlers.mainSectionHandler.enter);
-			sinon.assert.called(DummyHandlers.subSectionHandler.enter);
-		});
-	});
-
-	it("should throw an Error if a route change is raised while one is being processed", function (done) {
-		var reject = sinon.spy();
-
-		AppRouter.go("/foo/bar");
-
-		waits(100);
-
-		runs(function() {
-			AppRouter.go("/foo").then(null, reject).catch(reject);
-		});
-
-		waits(100);
-
-		runs(function() {
-			sinon.assert.calledOnce(reject);
-		});
-	});
+    });
 });
 `;
 

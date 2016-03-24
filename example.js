@@ -4,39 +4,29 @@ var babel  = require("babel-core");
 var plugin = require("./lib/index");
 
 var code = `
-it("should update the fixing date when current date is another tenor", () => {
-			leg.setFieldValue("Tenor", "SPOT");
+it("should not trigger long click if within timeout", function() {
+	createNumericKeyboard();
+	dummyElement = document.createElement("td");
+	dummyElement.dataset.value = "delete";
 
-			let stubEvent = {
-				getFields: function() {
-					return {
-						ForwardType: 'NDF',
-						FixingDates: '{"1W": "20160403"}'
-					};
-				}
-			};
+	dummyEvent = {
+		preventDefault: dummPreventDefault,
+		stopPropagation: dummyStopPropagation,
+		target: dummyElement
+	};
 
-			let getSelectedValueStub = {
-				getSelectedValue: () => {
-					return { tenor: "1W", date: "20160404" };
-				}
-			};
+	numericKeyboard.touchStart(dummyEvent);
+	waits(KeyboardConstants.LONG_CLICK_TIMEOUT - 100);
 
-			var tenorDatesListener = CTSL.getSLJS().subscribe.lastCall.args[1];
-			tenorDatesListener.onRecordUpdate(null, stubEvent);
+	runs(function() {
+			numericKeyboard.touchEnd(dummyEvent);
 
-			modalBox.querySelector = sinon.stub().withArgs('caplin-calendar-tenor-picker').returns(getSelectedValueStub);
-
-			waits(20)
-			runs(() => {
-				tradeTicket.showCalendarTenorPicker();
-				modalBox.trigger("button-click-ok");
-
-				expect(tradeTicket.isCurrencyPairNDF()).toBe(true);
-				expect(tradeTicket.ndfFixingDate()).toBe("03/04/2016");
-			})
-
-		});
+			expect(longClickCalled).toBe(false);
+			expect(dummPreventDefault.called).toBe(true);
+			expect(dummyStopPropagation.called).toBe(true);
+		}
+	);
+});
 `;
 
 var output = babel.transform(code, {
